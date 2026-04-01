@@ -374,7 +374,7 @@ function setupEventListeners() {
     
      // Back to Top Button & Scroll Progress
     const backToTopBtn = document.getElementById('backToTop');
-    const scrollProgressBar = document.getElementById('scrollProgressBar');
+    const navProgressBar = document.getElementById('navProgressBar');
     
     window.addEventListener('scroll', () => {
         // Back to top button visibility
@@ -384,12 +384,12 @@ function setupEventListeners() {
             backToTopBtn.classList.remove('visible');
         }
         
-        // Update scroll progress bar
+      // Update nav progress bar
         const scrollTop = window.scrollY;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollPercent = (scrollTop / docHeight) * 100;
-        if (scrollProgressBar) {
-            scrollProgressBar.style.width = scrollPercent + '%';
+        if (navProgressBar) {
+            navProgressBar.style.width = scrollPercent + '%';
         }
     });
     
