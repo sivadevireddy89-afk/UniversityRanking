@@ -372,14 +372,24 @@ function setupEventListeners() {
         document.querySelector('.nav').classList.toggle('mobile-active');
     });
     
-    // Back to Top Button
+     // Back to Top Button & Scroll Progress
     const backToTopBtn = document.getElementById('backToTop');
+    const scrollProgressBar = document.getElementById('scrollProgressBar');
     
     window.addEventListener('scroll', () => {
+        // Back to top button visibility
         if (window.scrollY > 500) {
             backToTopBtn.classList.add('visible');
         } else {
             backToTopBtn.classList.remove('visible');
+        }
+        
+        // Update scroll progress bar
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercent = (scrollTop / docHeight) * 100;
+        if (scrollProgressBar) {
+            scrollProgressBar.style.width = scrollPercent + '%';
         }
     });
     
