@@ -367,15 +367,104 @@ function setupEventListeners() {
         alert(`Comparing ${compareList.length} universities. Feature coming soon!`);
     });
     
-    // Mobile Menu
-    document.getElementById('menuToggle').addEventListener('click', () => {
-        document.querySelector('.nav').classList.toggle('mobile-active');
+    // Mobile Menu - MEplace Style
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuClose = document.getElementById('menuClose');
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+    function openMobileMenu() {
+        mobileMenu.classList.add('active');
+        menuToggle.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        menuToggle.setAttribute('aria-expanded', 'true');
+        mobileMenu.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('active');
+        menuToggle.classList.remove('active');
+        document.body.style.overflow = '';
+        menuToggle.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+    }
+
+    menuToggle.addEventListener('click', () => {
+        if (mobileMenu.classList.contains('active')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+
+    menuClose.addEventListener('click', closeMobileMenu);
+
+    // Close mobile menu when clicking on a link
+    mobileNavLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            closeMobileMenu();
+        });
+    });
+
+    // Close mobile menu when clicking outside
+    mobileMenu.addEventListener('click', (e) => {
+        if (e.target === mobileMenu) {
+            closeMobileMenu();
+        }
+    });
+
+    // Close mobile menu on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+            closeMobileMenu();
+        }
     });
     
-     // Back to Top Button & Scroll Progress
+    // Back to Top Button & Scroll Progress
     const backToTopBtn = document.getElementById('backToTop');
     const navProgressBar = document.getElementById('navProgressBar');
     
+    // Scroll Spy - Highlight nav based on current section
+    const sections = [
+        { id: 'rankings', nav: 'Rankings' },
+        { id: 'methodology', nav: 'Methodology' },
+        { id: 'why-trkm', nav: 'Why TRKM' },
+        { id: 'compare', nav: 'Compare' },
+        { id: 'about', nav: 'About' },
+        { id: 'learning-hub', nav: 'Learning Hub' }
+    ];
+
+    function updateActiveNav() {
+        const scrollPos = window.scrollY + 150; // Offset for header
+
+        sections.forEach((section, index) => {
+            const el = document.getElementById(section.id) || (index === 0 ? document.querySelector('.hero-slider') : null);
+            if (el) {
+                const top = el.offsetTop;
+                const bottom = top + el.offsetHeight;
+
+                if (scrollPos >= top && scrollPos < bottom) {
+                    // Remove active from all nav links
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                        link.removeAttribute('aria-current');
+                    });
+                    // Add active to current section's nav link
+                    const activeLink = Array.from(document.querySelectorAll('.nav-link')).find(
+                        link => {
+                            const textSpan = link.querySelector('.nav-text');
+                            return textSpan && textSpan.textContent.trim() === section.nav;
+                        }
+                    );
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                        activeLink.setAttribute('aria-current', 'page');
+                    }
+                }
+            }
+        });
+    }
+
     window.addEventListener('scroll', () => {
         // Back to top button visibility
         if (window.scrollY > 500) {
@@ -383,15 +472,21 @@ function setupEventListeners() {
         } else {
             backToTopBtn.classList.remove('visible');
         }
-        
-      // Update nav progress bar
+
+        // Update nav progress bar
         const scrollTop = window.scrollY;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollPercent = (scrollTop / docHeight) * 100;
         if (navProgressBar) {
             navProgressBar.style.width = scrollPercent + '%';
         }
+
+        // Update active nav based on scroll position
+        updateActiveNav();
     });
+
+    // Initial check on load
+    updateActiveNav();
     
     backToTopBtn.addEventListener('click', () => {
         window.scrollTo({
@@ -495,3 +590,270 @@ function updatePagination() {
     prevPageBtn.disabled = currentPage === 1;
     nextPageBtn.disabled = currentPage === totalPages;
 }
+
+// Compare Section Functionality
+let compareSlotA = null;
+let compareSlotB = null;
+let activeSlot = null;
+
+function initCompareSection() {
+    const addButtons = document.querySelectorAll('.compare-placeholder .btn');
+    addButtons.forEach((btn, index) => {
+        btn.addEventListener('click', () => openUniversitySelector(index));
+    });
+}
+
+function openUniversitySelector(slotIndex) {
+    activeSlot = slotIndex;
+    
+    // Create modal if doesn't exist
+    let modal = document.getElementById('universitySelectorModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'universitySelectorModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal modal-medium">
+                <button class="modal-close" onclick="closeUniversitySelector()">&times;</button>
+                <div class="modal-content">
+                    <h3>Select University</h3>
+                    <div class="search-box" style="margin: 1rem 0;">
+                        <input type="text" id="compareSearchInput" placeholder="Search universities..." class="filter-select" style="width: 100%;">
+                    </div>
+                    <div class="university-list" id="universityList" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Universities populated here -->
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add search functionality
+        document.getElementById('compareSearchInput').addEventListener('input', filterUniversityList);
+    }
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    renderUniversityList(universities);
+}
+
+function closeUniversitySelector() {
+    const modal = document.getElementById('universitySelectorModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    activeSlot = null;
+}
+
+function renderUniversityList(data) {
+    const list = document.getElementById('universityList');
+    list.innerHTML = data.map(uni => `
+        <div class="university-list-item" onclick="selectUniversityForCompare(${uni.rank})" style="
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: background-color 0.2s;
+        " onmouseover="this.style.backgroundColor='var(--gray-50)'" onmouseout="this.style.backgroundColor=''">
+            <span class="rank-badge" style="
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: ${uni.rank <= 10 ? 'var(--accent)' : 'var(--gray-200)'};
+                color: ${uni.rank <= 10 ? 'white' : 'var(--gray-700)'};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                font-size: 0.875rem;
+            ">${uni.rank}</span>
+            <div>
+                <div style="font-weight: 600; color: var(--gray-900);">${uni.name}</div>
+                <div style="font-size: 0.875rem; color: var(--gray-600);">${uni.country} • Score: ${uni.score}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterUniversityList() {
+    const searchTerm = document.getElementById('compareSearchInput').value.toLowerCase();
+    const filtered = universities.filter(uni => 
+        uni.name.toLowerCase().includes(searchTerm) ||
+        uni.country.toLowerCase().includes(searchTerm)
+    );
+    renderUniversityList(filtered);
+}
+
+function selectUniversityForCompare(rank) {
+    const uni = universities.find(u => u.rank === rank);
+    if (!uni || activeSlot === null) return;
+    
+    if (activeSlot === 0) {
+        compareSlotA = uni;
+    } else {
+        compareSlotB = uni;
+    }
+    
+    updateCompareDisplay();
+    closeUniversitySelector();
+}
+
+function updateCompareDisplay() {
+    const slots = document.querySelectorAll('.compare-slot');
+    
+    // Update Slot A
+    if (compareSlotA) {
+        slots[0].innerHTML = `
+            <div class="compare-selected" style="
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                box-shadow: var(--shadow-sm);
+                position: relative;
+            ">
+                <button onclick="clearCompareSlot(0)" style="
+                    position: absolute;
+                    top: 0.5rem;
+                    right: 0.5rem;
+                    background: none;
+                    border: none;
+                    font-size: 1.25rem;
+                    cursor: pointer;
+                    color: var(--gray-400);
+                ">&times;</button>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span class="rank-badge" style="
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: ${compareSlotA.rank <= 10 ? 'var(--accent)' : 'var(--gray-200)'};
+                        color: ${compareSlotA.rank <= 10 ? 'white' : 'var(--gray-700)'};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 600;
+                        font-size: 0.875rem;
+                    ">${compareSlotA.rank}</span>
+                    <h4 style="margin: 0; font-size: 1rem; color: var(--gray-900);">${compareSlotA.name}</h4>
+                </div>
+                <p style="margin: 0; font-size: 0.875rem; color: var(--gray-600);">${compareSlotA.country}</p>
+            </div>
+        `;
+    }
+    
+    // Update Slot B
+    if (compareSlotB) {
+        slots[1].innerHTML = `
+            <div class="compare-selected" style="
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                box-shadow: var(--shadow-sm);
+                position: relative;
+            ">
+                <button onclick="clearCompareSlot(1)" style="
+                    position: absolute;
+                    top: 0.5rem;
+                    right: 0.5rem;
+                    background: none;
+                    border: none;
+                    font-size: 1.25rem;
+                    cursor: pointer;
+                    color: var(--gray-400);
+                ">&times;</button>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span class="rank-badge" style="
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: ${compareSlotB.rank <= 10 ? 'var(--accent)' : 'var(--gray-200)'};
+                        color: ${compareSlotB.rank <= 10 ? 'white' : 'var(--gray-700)'};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 600;
+                        font-size: 0.875rem;
+                    ">${compareSlotB.rank}</span>
+                    <h4 style="margin: 0; font-size: 1rem; color: var(--gray-900);">${compareSlotB.name}</h4>
+                </div>
+                <p style="margin: 0; font-size: 0.875rem; color: var(--gray-600);">${compareSlotB.country}</p>
+            </div>
+        `;
+    }
+    
+    // Update comparison table
+    updateCompareTable();
+}
+
+function clearCompareSlot(slotIndex) {
+    if (slotIndex === 0) {
+        compareSlotA = null;
+    } else {
+        compareSlotB = null;
+    }
+    
+    const slots = document.querySelectorAll('.compare-slot');
+    slots[slotIndex].innerHTML = `
+        <div class="compare-placeholder">
+            <span class="compare-icon">🔍</span>
+            <p>Search and select ${slotIndex === 0 ? 'first' : 'second'} university</p>
+            <button class="btn btn-outline" onclick="openUniversitySelector(${slotIndex})">Add University</button>
+        </div>
+    `;
+    
+    updateCompareTable();
+}
+
+function updateCompareTable() {
+    const uniA = compareSlotA;
+    const uniB = compareSlotB;
+    
+    // Update headers
+    const uniAHeader = document.querySelector('.feature-header .feature-uni-a');
+    const uniBHeader = document.querySelector('.feature-header .feature-uni-b');
+    
+    if (uniAHeader) uniAHeader.textContent = uniA ? uniA.name : 'University A';
+    if (uniBHeader) uniBHeader.textContent = uniB ? uniB.name : 'University B';
+    
+    // Update data rows
+    const metrics = [
+        { key: 'rank', label: 'Overall Rank' },
+        { key: 'score', label: 'Overall Score' },
+        { key: 'academic', label: 'Academic Excellence' },
+        { key: 'research', label: 'Research Impact' },
+        { key: 'employability', label: 'Employability Score' },
+        { key: 'global', label: 'Global Engagement' },
+        { key: 'impact', label: 'Social Impact' },
+        { key: 'digital', label: 'Digital Readiness' }
+    ];
+    
+    const rows = document.querySelectorAll('.feature-row:not(.feature-header)');
+    rows.forEach((row, index) => {
+        const metric = metrics[index];
+        if (!metric) return;
+        
+        const uniAValue = row.querySelector('.feature-uni-a');
+        const uniBValue = row.querySelector('.feature-uni-b');
+        
+        if (uniAValue) {
+            uniAValue.textContent = uniA ? (metric.key === 'rank' ? `#${uniA[metric.key]}` : uniA[metric.key]) : '-';
+            uniAValue.style.color = uniA ? 'var(--gray-900)' : 'var(--gray-500)';
+            uniAValue.style.fontWeight = uniA ? '600' : '500';
+        }
+        
+        if (uniBValue) {
+            uniBValue.textContent = uniB ? (metric.key === 'rank' ? `#${uniB[metric.key]}` : uniB[metric.key]) : '-';
+            uniBValue.style.color = uniB ? 'var(--gray-900)' : 'var(--gray-500)';
+            uniBValue.style.fontWeight = uniB ? '600' : '500';
+        }
+    });
+}
+
+// Initialize compare section on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    initCompareSection();
+});

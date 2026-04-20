@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://trkm-rankings.com/sitemap.xml
+
+# Crawl delay for better server performance
+Crawl-delay: 1
+
+# Disallow patterns (if any in the future)
+# Disallow: /admin/
+# Disallow: /private/
+
+# Google-specific
+User-agent: Googlebot
+Allow: /
+
+# Bing-specific
+User-agent: Bingbot
+Allow: /
+
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+
+# Yahoo
+User-agent: Slurp
+Allow: /
